@@ -30,6 +30,8 @@ void func_addi(uint16_t &dst, uint16_t src, uint16_t imm);
 
 void parse_instruc(uint16_t mem[], uint16_t registers[], uint16_t &progC);
 
+// used to determine if program should keep running
+bool is_halt(uint16_t mem[], uint16_t regs[], uint16_t pc);
 
 
 int main() {
@@ -38,14 +40,18 @@ int main() {
     uint16_t pc = 0;
     uint16_t num = 96;
 
-    // 010 0010100101011
+    // 010 000 000 000 0011
     uint16_t mem[8192];
     
+
+
     mem[0] = 8328;
     mem[1] = 8449;
-    mem[2] = 17707;
-    mem[23] = 3131;
+    mem[2] = 8449;
+    mem[3] = 16387;
 
+    parse_instruc(mem, regs, pc);
+    parse_instruc(mem, regs, pc);
     parse_instruc(mem, regs, pc);
     parse_instruc(mem, regs, pc);
     //parse_instruc(mem[2], regs, pc);
@@ -153,9 +159,15 @@ void parse_instruc(uint16_t mem[], uint16_t registers[], uint16_t &progC){
 
     // lw
     if (opcode == 4) {
-        registers[reg2] = mem[imm_7 + registers[reg1]];
-
         progC += 1;
+
+        // do nothing if regDST is 0
+        if(reg2 == 0) {
+            return;
+        }
+
+        registers[reg2] = mem[imm_7 + registers[reg1]];
+        return;
     }
 
     // sw
@@ -188,6 +200,8 @@ void parse_instruc(uint16_t mem[], uint16_t registers[], uint16_t &progC){
     }
 
     // no reg args
+
+    // isolate immediate (13-bit)
     uint16_t imm_13 = instruc;
     imm_13 = imm_13 << 3;
     imm_13 = imm_13 >> 3;
@@ -207,6 +221,57 @@ void parse_instruc(uint16_t mem[], uint16_t registers[], uint16_t &progC){
     }
 } // parse_instruc
 
+
+
+bool is_halt(uint16_t mem[], uint16_t regs[], uint16_t pc) {
+    uint16_t instruction = mem[pc];
+
+    uint16_t opcode = instruction;
+    opcode = opcode >> 13;
+    
+    uint16_t func_code = instruction;
+    func_code = func_code << 12;
+    func_code = func_code >> 12;
+
+
+    // halt by jr
+    if(opcode == 0 && func_code == 8) {
+        uint16_t regSRC = instruction;
+        regSRC = regSRC << 3;
+        regSRC = regSRC >> 13;
+
+        return regs[regSRC] == pc; 
+    }
+
+
+    // halt by jeq
+    if(opcode == 6) {
+        uint16_t reg1, reg2, imm;
+        reg1 = instruction << 3;
+        reg1 = reg1 >> 13;
+
+        reg2 = instruction << 6;
+        reg2 = reg2 >> 13;
+
+        imm = instruction << 9;
+        imm = imm >> 9;
+
+
+        return regs[reg1] == regs[reg2] && imm == 0;
+    }
+
+
+    // halt by j or jal
+    if(opcode == 2 || opcode == 3) {
+        uint16_t imm = instruction;
+        imm = imm << 3;
+        imm = imm >> 3;
+
+        return imm == pc;
+    }
+
+    return false; // any remaining cases;
+}
 
 void func_add(uint16_t &dst, uint16_t srca, uint16_t srcb) {
     dst = srca + srcb;
