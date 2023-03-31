@@ -1,5 +1,11 @@
+#include <cstddef>
 #include <iostream>
-#include <unordered_map>
+#include <string>
+#include <vector>
+#include <fstream>
+#include <iomanip>
+#include <regex>
+#include <cstdlib>
 using namespace std;
 
 // functions to make
@@ -33,34 +39,79 @@ void parse_instruc(uint16_t mem[], uint16_t registers[], uint16_t &progC);
 // used to determine if program should keep running
 bool is_halt(uint16_t mem[], uint16_t regs[], uint16_t pc);
 
+size_t const static NUM_REGS = 8; 
+size_t const static MEM_SIZE = 1<<13;
+size_t const static REG_SIZE = 1<<16;
+
+void load_machine_code(ifstream &f, uint16_t mem[]) {
+    regex machine_code_re("^ram\\[(\\d+)\\] = 16'b(\\d+);.*$");
+    size_t expectedaddr = 0;
+    string line;
+    while (getline(f, line)) {
+        smatch sm;
+
+        // checks if matches format
+        if (!regex_match(line, sm, machine_code_re)) {
+            cerr << "Can't parse line: " << line << endl;
+            exit(1);
+        }
+
+        // ensures instructions increment properly
+        size_t addr = stoi(sm[1], nullptr, 10);
+        uint16_t instr = stoi(sm[2], nullptr, 2);
+        if (addr != expectedaddr) {
+            cerr << "Memory addresses encountered out of sequence: " << addr << endl;
+            exit(1);
+        }
+
+        // ensures program doesn't load too many instructions
+        if (addr >= MEM_SIZE) {
+            cerr << "Program too big for memory" << endl;
+            exit(1);
+        }
+        expectedaddr ++;
+        mem[addr] = instr; // store instruction in array
+    }
+}
+
+
+uint16_t sign_extend(uint16_t num) {
+    uint16_t msb = num << 9;
+    msb = msb >> 15;
+    uint16_t temp = 0b1111111110000000;
+    uint16_t out;
+
+    if(msb == 0){
+        return num;
+    }
+    return (num | temp);
+}
 
 int main() {
-    uint16_t regs[8];
-    regs[0] = 0;
+    uint16_t regs[8] = {0};
     uint16_t pc = 0;
-    uint16_t num = 96;
-
-    // 010 000 000 000 0011
-    uint16_t mem[8192];
+    uint16_t memory[8192];
+    ifstream f("fib_iter.bin");
+    bool keepGoing = true;
+    
+    load_machine_code(f, memory);
     
 
+    while(keepGoing) {
+        keepGoing = !is_halt(memory, regs, pc);
 
-    mem[0] = 8328;
-    mem[1] = 8449;
-    mem[2] = 8449;
-    mem[3] = 16387;
+        
+        parse_instruc(memory, regs, pc);
 
-    parse_instruc(mem, regs, pc);
-    parse_instruc(mem, regs, pc);
-    parse_instruc(mem, regs, pc);
-    parse_instruc(mem, regs, pc);
-    //parse_instruc(mem[2], regs, pc);
+        // ignore first 3 bits
+        pc = pc << 3;
+        pc = pc >> 3;        
+    }
 
-
-    cout << "reg 1: "<< regs[1] << endl;
-    cout << "reg 2: "<< regs[2] << endl;
-    cout << "reg 3: "<< regs[3] << endl;
     cout << "pc: " << pc << endl;
+    for(size_t i = 0; i < 8; i++) {
+        cout << "$" << i << ": " << regs[i] << endl;
+    }
 }
 
 // merge into main 
@@ -135,7 +186,6 @@ void parse_instruc(uint16_t mem[], uint16_t registers[], uint16_t &progC){
 
         // jr
         if (func_code == 8) {
-            registers[7] = progC + 1;
             progC = registers[reg1];
             return;
         }
@@ -152,6 +202,7 @@ void parse_instruc(uint16_t mem[], uint16_t registers[], uint16_t &progC){
 
     // slti
     if (opcode == 7) {
+        imm_7 = sign_extend(imm_7);
         func_slti(registers[reg2], registers[reg1], imm_7);
         progC += 1;
         return;
@@ -166,12 +217,16 @@ void parse_instruc(uint16_t mem[], uint16_t registers[], uint16_t &progC){
             return;
         }
 
+        imm_7 = sign_extend(imm_7);
+
         registers[reg2] = mem[imm_7 + registers[reg1]];
         return;
     }
 
     // sw
     if (opcode == 5) {
+        imm_7 = sign_extend(imm_7);
+
         mem[imm_7 + registers[reg1]] = registers[reg2];
 
         progC += 1;
@@ -180,6 +235,7 @@ void parse_instruc(uint16_t mem[], uint16_t registers[], uint16_t &progC){
     // jeq
     if (opcode == 6) {
         if(registers[reg1] == registers[reg2]) {
+            imm_7 = sign_extend(imm_7);
             progC += 1 + imm_7;
             return;
         }
@@ -195,6 +251,8 @@ void parse_instruc(uint16_t mem[], uint16_t registers[], uint16_t &progC){
         if(reg2 == 0){
             return;
         }
+
+        imm_7 = sign_extend(imm_7);
         func_addi(registers[reg2], registers[reg1], imm_7);
         return;
     }
@@ -282,7 +340,7 @@ void func_sub(uint16_t &dst, uint16_t srca, uint16_t srcb){
 }
 
 void func_or(uint16_t &dst, uint16_t srca, uint16_t srcb){
-    dst = srca ^ srcb;
+    dst = srca | srcb;
 }
 
 void func_and(uint16_t &dst, uint16_t srca, uint16_t srcb) {
