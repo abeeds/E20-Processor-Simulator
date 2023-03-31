@@ -249,8 +249,6 @@ void parse_instruc(uint16_t mem[], uint16_t registers[], uint16_t &progC){
             progC = registers[reg1];
             return;
         }
-
-
     }
 
     // 2 reg args
