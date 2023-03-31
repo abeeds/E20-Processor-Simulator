@@ -38,15 +38,19 @@ int main() {
     uint16_t pc = 0;
     uint16_t num = 96;
 
-    // 001 000 001 000 1000
-    // movi $1,8
-    uint16_t an_inst = 8328;
+    // 010 0010100101011
+    uint16_t inst1 = 8328;
+    uint16_t inst2 = 8449;
+    uint16_t inst3 = 17707;
 
-    parse_instruc(an_inst, regs, pc);
+    parse_instruc(inst1, regs, pc);
+    parse_instruc(inst2, regs, pc);
+    parse_instruc(inst3, regs, pc);
 
 
-    //func_addi(regs[1], regs[0], num);
-    cout << "reg 1: "<<regs[1] << endl;
+    cout << "reg 1: "<< regs[1] << endl;
+    cout << "reg 2: "<< regs[2] << endl;
+    cout << "reg 3: "<< regs[3] << endl;
     cout << "pc: " << pc << endl;
 }
 
@@ -56,8 +60,6 @@ int main() {
 
 // need to add break after every condition
 void parse_instruc(uint16_t instruc, uint16_t registers[], uint16_t &progC){
-    registers[0] = 0;
-
     uint16_t opcode = instruc >> 13;
     
     // isolate registers
@@ -68,10 +70,10 @@ void parse_instruc(uint16_t instruc, uint16_t registers[], uint16_t &progC){
     reg1 = reg1 << 3;
     reg1 = reg1 >> 13;
 
-    reg2 = reg2 << 3;
-    reg2 = reg3 >> 13;
+    reg2 = reg2 << 6;
+    reg2 = reg2 >> 13;
 
-    reg3 = reg3 << 3;
+    reg3 = reg3 << 9;
     reg3 = reg3 >> 13;
 
 
@@ -175,7 +177,6 @@ void parse_instruc(uint16_t instruc, uint16_t registers[], uint16_t &progC){
         if(reg2 == 0){
             return;
         }
-
         func_addi(registers[reg2], registers[reg1], imm_7);
         return;
     }
