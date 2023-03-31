@@ -56,13 +56,7 @@ uint16_t func_jeq(uint16_t srca, uint16_t srcb, uint16_t imm);
 void func_addi(uint16_t &dst, uint16_t src, uint16_t imm);
 
 
-/*
-    TODO
-    binary to hex 
-    
 
-
-*/
 
 int main(int argc, char *argv[]) {
     /*
