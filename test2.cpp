@@ -28,7 +28,7 @@ uint16_t func_jeq(uint16_t srca, uint16_t srcb, uint16_t imm);
 
 void func_addi(uint16_t &dst, uint16_t src, uint16_t imm);
 
-void parse_instruc(uint16_t instruc, uint16_t registers[], uint16_t &progC);
+void parse_instruc(uint16_t mem[], uint16_t registers[], uint16_t &progC);
 
 
 
@@ -39,13 +39,16 @@ int main() {
     uint16_t num = 96;
 
     // 010 0010100101011
-    uint16_t inst1 = 8328;
-    uint16_t inst2 = 8449;
-    uint16_t inst3 = 17707;
+    uint16_t mem[8192];
+    
+    mem[0] = 8328;
+    mem[1] = 8449;
+    mem[2] = 17707;
+    mem[23] = 3131;
 
-    parse_instruc(inst1, regs, pc);
-    parse_instruc(inst2, regs, pc);
-    parse_instruc(inst3, regs, pc);
+    parse_instruc(mem, regs, pc);
+    parse_instruc(mem, regs, pc);
+    //parse_instruc(mem[2], regs, pc);
 
 
     cout << "reg 1: "<< regs[1] << endl;
@@ -55,11 +58,10 @@ int main() {
 }
 
 // merge into main 
-
 // will run for every instruction
-
 // need to add break after every condition
-void parse_instruc(uint16_t instruc, uint16_t registers[], uint16_t &progC){
+void parse_instruc(uint16_t mem[], uint16_t registers[], uint16_t &progC){
+    uint16_t instruc = mem[progC];
     uint16_t opcode = instruc >> 13;
     
     // isolate registers
@@ -151,12 +153,16 @@ void parse_instruc(uint16_t instruc, uint16_t registers[], uint16_t &progC){
 
     // lw
     if (opcode == 4) {
+        registers[reg2] = mem[imm_7 + registers[reg1]];
 
+        progC += 1;
     }
 
     // sw
     if (opcode == 5) {
+        mem[imm_7 + registers[reg1]] = registers[reg2];
 
+        progC += 1;
     }
 
     // jeq
