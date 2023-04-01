@@ -17,6 +17,8 @@ size_t const static REG_SIZE = 1<<16;
 
 size_t load_machine_code(ifstream &f, uint16_t mem[]);
 
+void print_state(uint16_t pc, uint16_t regs[], uint16_t memory[], size_t memquantity);
+
 // 3 reg args ---------------------------------------------
 void func_add(uint16_t &dst, uint16_t srca, uint16_t srcb);
 
@@ -46,10 +48,12 @@ bool is_halt(uint16_t mem[], uint16_t regs[], uint16_t pc);
 
 uint16_t sign_extend(uint16_t num);
 
-int main(int argc, char *argv[]) {
+//int argc, char *argv[]
+int main() {
     /*
         Parse the command-line arguments
     */
+   /*
     char *filename = nullptr;
     bool do_help = false;
     bool arg_error = false;
@@ -67,7 +71,7 @@ int main(int argc, char *argv[]) {
                 arg_error = true;
         }
     }
-    /* Display error message if appropriate */
+    // Display error message if appropriate 
     if (arg_error || do_help || filename == nullptr) {
         cerr << "usage " << argv[0] << " [-h] filename" << endl << endl; 
         cerr << "Simulate E20 machine" << endl << endl;
@@ -77,7 +81,8 @@ int main(int argc, char *argv[]) {
         cerr << "  -h, --help  show this help message and exit"<<endl;
         return 1;
     }
-
+    */
+   string filename = "fib_iter.bin";
     ifstream file(filename);
     if (!file.is_open()) {
         cerr << "Can't open file "<<filename<<endl;
@@ -164,13 +169,22 @@ void print_state(uint16_t pc, uint16_t regs[], uint16_t memory[], size_t memquan
 
     cout << setfill('0');
     bool cr = false;
-    for (size_t count=0; count<memquantity; count++) {
-        cout << hex << setw(4) << memory[count] << " ";
-        cr = true;
-        if (count % 8 == 7) {
-            cout << endl;
-            cr = false;
+    for (size_t count=0; count < 128; count++) {
+        if(count < memquantity) {
+            cout << hex << setw(4) << memory[count] << " ";
+            cr = true;
+            if (count % 8 == 7) {
+                cout << endl;
+                cr = false;
+            }
         }
+        else{
+            cout << "0000" << " ";
+            if (count % 8 == 7) {
+                cout << endl;
+            }
+        }
+        
     }
     if (cr)
         cout << endl;
