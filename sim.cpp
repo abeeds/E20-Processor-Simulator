@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
     /*
         Parse the command-line arguments
     */
-   
+   /**/
     char *filename = nullptr;
     bool do_help = false;
     bool arg_error = false;
@@ -208,8 +208,7 @@ void parse_instruc(uint16_t mem[], uint16_t registers[], uint16_t &progC){
     reg3 = reg3 << 9;
     reg3 = reg3 >> 13;
 
-
-
+    
 
     // 3 reg argument
     if(opcode == 0) {
@@ -220,9 +219,15 @@ void parse_instruc(uint16_t mem[], uint16_t registers[], uint16_t &progC){
 
         // the functions inside this should not execute
         // if reg3/regDST is 0, $0 should remain 0 at all times
+
+        if(reg3 == 0 && func_code != 8) {
+            return;
+        }
+
         if(reg3 != 0) {
             // add (3, 1, 2)
             if(func_code == 0) {
+
                 func_add(registers[reg3], registers[reg1], registers[reg2]);
                 progC += 1;
                 return;
@@ -230,6 +235,7 @@ void parse_instruc(uint16_t mem[], uint16_t registers[], uint16_t &progC){
 
             // sub
             if(func_code == 1) {
+
                 func_sub(registers[reg3], registers[reg1], registers[reg2]);
                 progC += 1;
                 return;
@@ -262,6 +268,7 @@ void parse_instruc(uint16_t mem[], uint16_t registers[], uint16_t &progC){
             progC = registers[reg1];
             return;
         }
+        return; // incase of error
     }
 
     // 2 reg args
@@ -356,7 +363,6 @@ uint16_t sign_extend(uint16_t num) {
     uint16_t msb = num << 9;
     msb = msb >> 15;
     uint16_t temp = 0b1111111110000000;
-    uint16_t out;
 
     if(msb == 0){
         return num;
