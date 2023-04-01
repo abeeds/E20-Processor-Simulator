@@ -48,12 +48,12 @@ bool is_halt(uint16_t mem[], uint16_t regs[], uint16_t pc);
 
 uint16_t sign_extend(uint16_t num);
 
-//int argc, char *argv[]
-int main() {
+
+int main(int argc, char *argv[]) {
     /*
         Parse the command-line arguments
     */
-   /*
+   
     char *filename = nullptr;
     bool do_help = false;
     bool arg_error = false;
@@ -81,8 +81,7 @@ int main() {
         cerr << "  -h, --help  show this help message and exit"<<endl;
         return 1;
     }
-    */
-   string filename = "fib_iter.bin";
+
     ifstream file(filename);
     if (!file.is_open()) {
         cerr << "Can't open file "<<filename<<endl;
