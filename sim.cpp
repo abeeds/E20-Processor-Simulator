@@ -391,23 +391,6 @@ bool is_halt(uint16_t mem[], uint16_t regs[], uint16_t pc) {
     }
 
 
-    // halt by jeq
-    if(opcode == 6) {
-        uint16_t reg1, reg2, imm;
-        reg1 = instruction << 3;
-        reg1 = reg1 >> 13;
-
-        reg2 = instruction << 6;
-        reg2 = reg2 >> 13;
-
-        imm = instruction << 9;
-        imm = imm >> 9;
-
-
-        return regs[reg1] == regs[reg2] && imm == 0;
-    }
-
-
     // halt by j or jal
     if(opcode == 2 || opcode == 3) {
         uint16_t imm = instruction;
