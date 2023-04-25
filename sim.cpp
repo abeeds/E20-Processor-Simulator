@@ -15,7 +15,7 @@ size_t const static MEM_SIZE = 1<<13;
 size_t const static REG_SIZE = 1<<16;
 
 
-size_t load_machine_code(ifstream &f, uint16_t mem[]);
+void load_machine_code(ifstream &f, uint16_t mem[]);
 
 void print_state(uint16_t pc, uint16_t regs[], uint16_t memory[], size_t memquantity);
 
@@ -91,8 +91,9 @@ int main(int argc, char *argv[]) {
     // -------------------------------------------------
     //              Variable Assignments
     uint16_t regs[8] = {0};
-    uint16_t memory[8192];
+    uint16_t memory[8192] = {0};
     uint16_t pc = 0;
+    uint16_t bit_flipper = 8191;
     bool keepGoing = true;
     size_t quantity;
     
@@ -101,12 +102,12 @@ int main(int argc, char *argv[]) {
     //          Store Instructions in Memory
 
     // store quantity for print
-    quantity = load_machine_code(file, memory);
+    load_machine_code(file, memory);
 
 
     // -------------------------------------------------
     //                   Simulation
-
+    
     while(keepGoing){
         keepGoing = !is_halt(memory, regs, pc);
         parse_instruc(memory, regs, pc);
@@ -118,7 +119,7 @@ int main(int argc, char *argv[]) {
 
     // -------------------------------------------------
     // TODO: your code here. print the final state of the simulator before ending, using print_state
-    print_state(pc, regs, memory, quantity);
+    print_state(pc, regs, memory, 128);
     return 0;
 }
 // 
@@ -126,7 +127,7 @@ int main(int argc, char *argv[]) {
 // All prototype implementations below:
 
 
-size_t load_machine_code(ifstream &f, uint16_t mem[]) {
+void load_machine_code(ifstream &f, uint16_t mem[]) {
     regex machine_code_re("^ram\\[(\\d+)\\] = 16'b(\\d+);.*$");
     size_t expectedaddr = 0;
     string line;
@@ -155,7 +156,6 @@ size_t load_machine_code(ifstream &f, uint16_t mem[]) {
         expectedaddr ++;
         mem[addr] = instr; // store instruction in array
     }
-    return expectedaddr;
 }
 
 void print_state(uint16_t pc, uint16_t regs[], uint16_t memory[], size_t memquantity) {
@@ -191,7 +191,7 @@ void print_state(uint16_t pc, uint16_t regs[], uint16_t memory[], size_t memquan
 
 
 void parse_instruc(uint16_t mem[], uint16_t registers[], uint16_t &progC){
-    uint16_t instruc = mem[progC];
+    uint16_t instruc = mem[progC & 8191]; // 8191 is all 1s except first 3 bits, so this will ignore them
     uint16_t opcode = instruc >> 13;
     
     // isolate registers
