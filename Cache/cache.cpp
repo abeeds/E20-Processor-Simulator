@@ -3,8 +3,10 @@
 #include <cstddef>
 #include <string>
 #include <fstream>
+#include <algorithm>
 #include <limits>
 #include <iomanip>
+#include <bits/stdc++.h>
 using namespace std;
 
 /*
@@ -38,7 +40,7 @@ cache::cache(int assoc, int bksize, int rows) {
     // no need if associativity is 1 (direct mapped)
     if(associativity > 1) {
         for(int i = 0; i < rows; i++) {
-            history.push_back(new vector<int>);
+            history.push_back(new vector<size_t>);
         }
     }
     
@@ -59,15 +61,14 @@ cache::cache(cache* nextMem, int assoc, int bksize, int rows) : cache::cache(ass
 
 
 void cache::retrieve(uint16_t memory_address, uint16_t pc) {
-    uint16_t output = -1; // this is not a real memory address, and will let us know if we found what was requested
-
+    bool found = false;
     // calculate identifiers
         // Calculate tag
-        int tag = floor(memory_address / this->blocksize);
+        int tag = floor(memory_address / blocksize);
         tag = floor(tag / num_rows);
 
         // Calculate Index
-        int index = floor(memory_address / this->blocksize);
+        int index = floor(memory_address / blocksize);
         index = tag % num_rows;
     // 
 
@@ -78,46 +79,48 @@ void cache::retrieve(uint16_t memory_address, uint16_t pc) {
             continue;
         }
 
-        // need to update Cache history
+        // tag found
         if(table[i]->at(index) == tag) {
-            if(this->next_cache) {
+
+            // identify which cache is being used & print message
+            if(next_cache) {
                 print_log_entry("L1", "HIT", pc, memory_address, index);
             }
-
-            if(this->ram) {
+            if(ram) {
                 print_log_entry("L2", "HIT", pc, memory_address, index);
             }
-
-
+            found = true;
+            updateHistory(index, i);
+            return;
         }
 
     }
 
     // If we didn't find the desired memory Address:
 
+    
+
     // if the next in line memory is the ram & we didn't find what we requested
-    if(this->ram && output == -1) {
+    if(ram && !found) {
         //print_log_entry(const string &cache_name, const string &status, int pc, int addr, int row)
         print_log_entry("L2", "MISS", pc, memory_address, index);
-        
-        // update cache tables & history
+
+        // store it in cache
+        updateTable(memory_address);
 
 
     }
 
     // if it is a cache & we didn't find what we requested
-    if(this->next_cache && output == -1) {
-        // print accordingly
+    if(next_cache && !found) {
         print_log_entry("L1", "MISS", pc, memory_address, index);
-        
-        // will also print for the next cache
-        this->next_cache->retrieve(memory_address, pc);
+        // will perform this for next cache
+        next_cache->retrieve(memory_address, pc);
 
-        // update cache tables & history
+        // store in cache
+        updateTable(memory_address);
 
     }
-
-    // update the cache history
 
 }
 
@@ -126,7 +129,58 @@ void cache::retrieve(uint16_t memory_address, uint16_t pc) {
 
 // adds a value to table & updates history accordingly
 void cache::updateTable(uint16_t memory_address) {
-    
+    // calculate identifiers
+        // Calculate tag
+        int tag = floor(memory_address / blocksize);
+        tag = floor(tag / num_rows);
+
+        // Calculate Index or row
+        int index = floor(memory_address / blocksize);
+        index = tag % num_rows;
+    // 
+
+    // identify which set to add the new value to
+    size_t LRU; // least recently used
+
+    // incase certain ways have not yet been accessed
+    if(history[index]->size() < associativity) {
+        LRU = history[index]->size();
+    }
+    if(history[index]->size() == associativity) {
+        // if associativity is 4, highest index is 3
+        // which is also the least recently accessed
+        LRU = history[index]->at(associativity - 1);
+    }
+
+    table[LRU]->at(index) = tag;
+    updateHistory(index, LRU);
+}
+
+// will move the accessed row up in the history
+// to show that it was used most recently
+void cache::updateHistory(size_t row, size_t way) {
+    // locate it in the history
+    bool found = false;
+    size_t ind;
+    for(size_t i = 0; i < history[row]->size(); i++) {
+        if(history[row]->at(i) == way) {
+            found = true;
+            ind = i;
+        }
+    }
+
+    // if it is not in the history
+    if(!found) {
+        ind = history[row]->size();
+        history[row]->push_back(way);  
+    }
+     
+    // move it up to [0]
+    int temp = history[row]->at(ind); // store the original value to be moved
+    for(size_t i = way; i > 0; i--) {
+        history[row]->at(i) = history[row]->at(i - 1);
+    }
+    history[row]->at(0) = temp;
 }
 
 void cache::store(uint16_t memory_address) {
