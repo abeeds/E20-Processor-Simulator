@@ -35,8 +35,6 @@ void func_slt(uint16_t &dst, uint16_t srca, uint16_t srcb);
 
 void func_slti(uint16_t &dst, uint16_t src, uint16_t imm);
 
-uint16_t func_jeq(uint16_t srca, uint16_t srcb, uint16_t imm);
-
 void func_addi(uint16_t &dst, uint16_t src, uint16_t imm);
 
 
@@ -93,28 +91,20 @@ int main(int argc, char *argv[]) {
     uint16_t regs[8] = {0};
     uint16_t memory[8192] = {0};
     uint16_t pc = 0;
-    uint16_t bit_flipper = 8191;
     bool keepGoing = true;
-    size_t quantity;
     
 
     // -------------------------------------------------
     //          Store Instructions in Memory
 
-    // store quantity for print
     load_machine_code(file, memory);
 
 
     // -------------------------------------------------
     //                   Simulation
-    
     while(keepGoing){
-        keepGoing = !is_halt(memory, regs, pc);
+        keepGoing = !is_halt(memory, regs, (pc & 8191));
         parse_instruc(memory, regs, pc);
-
-        // ignore first 3 bits
-        pc = pc << 3;
-        pc = pc >> 3;
     }
 
     // -------------------------------------------------
@@ -168,22 +158,13 @@ void print_state(uint16_t pc, uint16_t regs[], uint16_t memory[], size_t memquan
 
     cout << setfill('0');
     bool cr = false;
-    for (size_t count=0; count < 128; count++) {
-        if(count < memquantity) {
-            cout << hex << setw(4) << memory[count] << " ";
-            cr = true;
-            if (count % 8 == 7) {
-                cout << endl;
-                cr = false;
-            }
+    for (size_t count=0; count < memquantity; count++) {
+        cout << hex << setw(4) << memory[count] << " ";
+        cr = true;
+        if (count % 8 == 7) {
+            cout << endl;
+            cr = false;
         }
-        else{
-            cout << "0000" << " ";
-            if (count % 8 == 7) {
-                cout << endl;
-            }
-        }
-        
     }
     if (cr)
         cout << endl;
@@ -355,6 +336,9 @@ void parse_instruc(uint16_t mem[], uint16_t registers[], uint16_t &progC){
         progC = imm_13;
         return;
     }
+
+    // if nothing happens go to next instruction
+    progC += 1;
 } // parse_instruc
 
 
@@ -390,6 +374,25 @@ bool is_halt(uint16_t mem[], uint16_t regs[], uint16_t pc) {
         return regs[regSRC] == pc; 
     }
 
+    // halt by jeq
+    if(opcode == 6) {
+        uint16_t reg1, reg2, imm;
+        reg1 = instruction << 3;
+        reg1 = reg1 >> 13;
+
+        reg2 = instruction << 6;
+        reg2 = reg2 >> 13;
+
+        imm = instruction << 9;
+        imm = imm >> 9;
+        imm = sign_extend(imm);
+
+        // this is where the jump will lead to
+        imm += pc + 1;
+        imm = imm & 8191; 
+
+        return (regs[reg1] == regs[reg2]) && imm == pc;
+    }
 
     // halt by j or jal
     if(opcode == 2 || opcode == 3) {
